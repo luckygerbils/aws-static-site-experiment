@@ -2,8 +2,34 @@
 <html>
     <head>
         <title>S3 static eebsite</title>
+        <style>
+            body {
+                display: flex;
+                flex-direction: row;
+                margin: 0;
+                height: 100vh;
+
+                --margin: 5px;
+                --padding: 5px;
+            }
+
+            section {
+                background-color: #ddd;
+                margin: var(--margin) 0px var(--margin) var(--margin);
+                padding: var(--padding);
+                width: 50%;
+            }
+            section:last-child {
+                margin-right: var(--margin);
+            }
+        </style>
     </head>
     <body>
-        Static static static?
+        <section>
+            Static static static?
+        </section>
+        <section>
+            Static static static
+        </section>
     </body>
 </html>
