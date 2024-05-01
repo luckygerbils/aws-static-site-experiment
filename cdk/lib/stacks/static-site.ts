@@ -61,7 +61,7 @@ export class StaticSiteStack extends cdk.Stack {
     });
 
     new BucketDeployment(this, "DeployStaticSite", {
-      sources: [ Source.asset("../website") ],
+      sources: [ Source.asset("../website/out") ],
       destinationBucket: staticSiteBucket,
       distribution: cloudFrontDistribution,
       distributionPaths: [ "/index.html" ],

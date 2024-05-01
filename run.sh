@@ -49,10 +49,22 @@ util:cdk() {
     util:npm run cdk --profile "${PROFILE:-$CDK_PROFILE}" "$@"
 }
 
+util:website() {
+    util:npm run website "$@"
+}
+
 ci:synth() {
-    cd cdk
-    npm ci
-    npx cdk synth
+    (
+        cd website
+        npm ci
+        npm run build
+
+    )
+    (
+        cd cdk
+        npm ci
+        npx cdk synth
+    )
 }
 
 bootstrap() {

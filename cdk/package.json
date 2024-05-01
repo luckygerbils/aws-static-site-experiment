@@ -7,11 +7,7 @@
   "scripts": {
     "clean": "tsc --build --clean",
     "watch": "tsc -w",
-    "test": "jest",
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "test": "jest"
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",
