@@ -30,11 +30,6 @@ export class StaticSiteStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    new BucketDeployment(this, "DeployStaticSite", {
-      sources: [ Source.asset("../website") ],
-      destinationBucket: staticSiteBucket,
-    });
-
     const domainName = "static-site-experiment.anasta.si";
     const certificate = new Certificate(usEast1Stack, "StaticSiteCertificate", {
       domainName,
@@ -63,6 +58,13 @@ export class StaticSiteStack extends cdk.Stack {
       zone: anastaSi,
       recordName: "static-site-experiment",
       target: RecordTarget.fromAlias(new CloudFrontTarget(cloudFrontDistribution))
+    });
+
+    new BucketDeployment(this, "DeployStaticSite", {
+      sources: [ Source.asset("../website") ],
+      destinationBucket: staticSiteBucket,
+      distribution: cloudFrontDistribution,
+      distributionPaths: [ "/index.html" ],
     });
   }
 }
