@@ -27,8 +27,9 @@ util:aws() {
 
 util:node() {
     docker run -it --rm \
-        -v ~/.aws:/root/.aws \
+        -v ~/.aws:/home/node/.aws \
         -v "$PWD":/usr/src/app \
+        -u node \
         --env JSII_SILENCE_WARNING_UNTESTED_NODE_VERSION=1 \
         --env NPM_CONFIG_UPDATE_NOTIFIER=false \
         -w /usr/src/app \
@@ -45,7 +46,13 @@ util:npx() {
 
 util:cdk() {
     private:sso_login
-    util:npx cdk --profile "${PROFILE:-$CDK_PROFILE}" "$@"
+    util:npm run cdk --profile "${PROFILE:-$CDK_PROFILE}" "$@"
+}
+
+ci:synth() {
+    cd cdk
+    npm ci
+    npx cdk synth
 }
 
 bootstrap() {

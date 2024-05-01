@@ -3,9 +3,10 @@ import 'source-map-support/register';
 import { CodePipeline, CodePipelineSource, ShellStep } from 'aws-cdk-lib/pipelines';
 import { App, Stack, Stage } from 'aws-cdk-lib';
 import { StaticSiteStack } from '../lib/stacks/static-site';
+import { nonNull } from "../lib/util";
 
 const env = {
-  account: process.env.CDK_DEFAULT_ACCOUNT!,
+  account: nonNull(process.env.CDK_DEFAULT_ACCOUNT!, "CDK_DEFAULT_ACCOUNT is null"),
   region: "us-west-2",
 };
 const app = new App();
@@ -14,7 +15,8 @@ const pipeline = new CodePipeline(pipelineStack, 'Pipeline', {
   pipelineName: 'AwsStaticSitePipeline',
   synth: new ShellStep('Synth', {
     input: CodePipelineSource.gitHub('luckygerbils/aws-static-site-experiment', 'main'),
-    commands: ['npm ci', 'npx cdk synth']
+    commands: ['./run.sh ci:synth'],
+    primaryOutputDirectory: "cdk/cdk.out"
   })
 });
 

@@ -1,15 +1,12 @@
 import * as cdk from 'aws-cdk-lib';
-import { Certificate, CertificateValidation, DnsValidatedCertificate } from 'aws-cdk-lib/aws-certificatemanager';
-import { CfnDistribution, CfnOriginAccessControl, Distribution, OriginAccessIdentity, ViewerProtocolPolicy } from 'aws-cdk-lib/aws-cloudfront';
+import { Certificate, CertificateValidation } from 'aws-cdk-lib/aws-certificatemanager';
+import { Distribution, OriginAccessIdentity, ViewerProtocolPolicy } from 'aws-cdk-lib/aws-cloudfront';
 import { S3Origin } from 'aws-cdk-lib/aws-cloudfront-origins';
-import { CanonicalUserPrincipal } from 'aws-cdk-lib/aws-iam';
-import { ARecord, CnameRecord, PublicHostedZone, RecordTarget } from 'aws-cdk-lib/aws-route53';
-import { BucketWebsiteTarget, CloudFrontTarget } from 'aws-cdk-lib/aws-route53-targets';
-import { BlockPublicAccess, Bucket, BucketAccessControl, ObjectOwnership } from 'aws-cdk-lib/aws-s3';
+import { ARecord, PublicHostedZone, RecordTarget } from 'aws-cdk-lib/aws-route53';
+import { CloudFrontTarget } from 'aws-cdk-lib/aws-route53-targets';
+import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { BucketDeployment, Source } from 'aws-cdk-lib/aws-s3-deployment';
 import { Construct } from 'constructs';
-import { stat } from 'fs';
-// import * as sqs from 'aws-cdk-lib/aws-sqs';
 
 interface StaticSiteStackProps {
 }
@@ -34,7 +31,7 @@ export class StaticSiteStack extends cdk.Stack {
     });
 
     new BucketDeployment(this, "DeployStaticSite", {
-      sources: [ Source.asset("website") ],
+      sources: [ Source.asset("../website") ],
       destinationBucket: staticSiteBucket,
     });
 
