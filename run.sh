@@ -2,9 +2,6 @@
 set -euo pipefail
 if [ -n "${DEBUG:-}" ]; then set -x; fi
 
-BOOTSTRAP_PROFILE=AdministratorAccess
-CDK_PROFILE=cdk
-
 private:log() { printf "%s\n" "$@" >&2; }
 
 help() {
@@ -14,62 +11,45 @@ help() {
 }
 
 private:sso_login() {
-    if ! util:aws --profile "$BOOTSTRAP_PROFILE" sts get-caller-identity >/dev/null; then
-        util:aws --profile "$BOOTSTRAP_PROFILE" sso login
+    if ! with:aws --profile AdministratorAccess sts get-caller-identity >/dev/null; then
+        with:aws --profile AdministratorAccess sso login
     fi
 }
 
-util:aws() {
-    docker run --rm -it \
+with:aws() {
+    docker run --rm \
         -v ~/.aws:/root/.aws \
         public.ecr.aws/aws-cli/aws-cli "$@"
 }
 
-util:node() {
-    docker run -it --rm \
-        -v ~/.aws:/home/node/.aws \
-        -v "$PWD":/usr/src/app \
-        -u node \
-        --env JSII_SILENCE_WARNING_UNTESTED_NODE_VERSION=1 \
-        --env NPM_CONFIG_UPDATE_NOTIFIER=false \
-        -w /usr/src/app \
-        docker.io/library/node "$@"
+in:cdk() {
+    pushd cdk
+    ./run.sh "$@"
+    popd
 }
 
-util:npm() {
-    util:node npm -- "$@"
+in:website() {
+    pushd website
+    ./run.sh "$@"
+    popd
 }
 
-util:npx() {
-    util:node npx -- "$@"
+in:lambda() {
+    pushd lambda
+    ./run.sh "$@"
+    popd
 }
 
-util:cdk() {
-    private:sso_login
-    util:npm run cdk --profile "${PROFILE:-$CDK_PROFILE}" "$@"
-}
-
-util:website() {
-    util:npm run website "$@"
+build-and-deploy() {
+    in:website build
+    in:lambda build
+    in:cdk cdk:deploy PipelineStack/StaticSiteStage/AwsStaticSiteExperimentStack
 }
 
 ci:synth() {
-    (
-        cd website
-        npm ci
-        npm run build
-
-    )
-    (
-        cd cdk
-        npm ci
-        npx cdk synth
-    )
-}
-
-bootstrap() {
-    PROFILE="$BOOTSTRAP_PROFILE" util:cdk bootstrap \
-        --cloudformation-execution-policies arn:aws:iam::aws:policy/AdministratorAccess
+    in:website ci:release
+    in:lambda ci:release
+    in:cdk ci:synth
 }
 
 "${@:-help}"

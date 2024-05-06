@@ -1,12 +1,17 @@
 import * as cdk from 'aws-cdk-lib';
 import { Certificate, CertificateValidation } from 'aws-cdk-lib/aws-certificatemanager';
-import { Distribution, OriginAccessIdentity, ViewerProtocolPolicy } from 'aws-cdk-lib/aws-cloudfront';
-import { S3Origin } from 'aws-cdk-lib/aws-cloudfront-origins';
+import { Distribution, OriginAccessIdentity, ViewerProtocolPolicy, Function as CloudFrontFunction, FunctionCode, FunctionEventType } from 'aws-cdk-lib/aws-cloudfront';
+import { FunctionUrlOrigin, S3Origin } from 'aws-cdk-lib/aws-cloudfront-origins';
+import { AccountRecovery, Mfa, UserPool, UserPoolClient, UserPoolClientIdentityProvider, UserPoolEmail, UserPoolIdentityProvider } from 'aws-cdk-lib/aws-cognito';
 import { ARecord, PublicHostedZone, RecordTarget } from 'aws-cdk-lib/aws-route53';
 import { CloudFrontTarget } from 'aws-cdk-lib/aws-route53-targets';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { BucketDeployment, Source } from 'aws-cdk-lib/aws-s3-deployment';
 import { Construct } from 'constructs';
+import { IdentityPool, UserPoolAuthenticationProvider } from '@aws-cdk/aws-cognito-identitypool-alpha';
+import { Code, Function, FunctionUrlAuthType, Runtime } from 'aws-cdk-lib/aws-lambda';
+import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import fs = require('fs');
 
 interface StaticSiteStackProps {
 }
@@ -30,6 +35,61 @@ export class StaticSiteStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
+    const dataBucket = new Bucket(this, "DataBucket", {
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    })
+
+    const userPool = new UserPool(this, "UserPool", {
+      selfSignUpEnabled: true,
+      signInAliases: {
+        email: true,
+      },
+      autoVerify: {
+        email: true,
+      },
+      accountRecovery: AccountRecovery.EMAIL_ONLY,
+      mfa: Mfa.OPTIONAL,
+    });
+
+    const userPoolClient = new UserPoolClient(this, "UserPoolClient", {
+      userPool,
+      authFlows: {
+        userSrp: true,
+      },
+      supportedIdentityProviders: [
+        UserPoolClientIdentityProvider.COGNITO,
+      ]
+    });
+
+    const identityPool = new IdentityPool(this, "IdentityPool", {
+      authenticationProviders: {
+        userPools: [ new UserPoolAuthenticationProvider({ userPool, userPoolClient }) ],
+      },
+    });
+
+    const lambda = new Function(this, "TestFunction", {
+      runtime: Runtime.NODEJS_18_X,
+      handler: "index.handler",
+      code: Code.fromAsset("../lambda"),
+      environment: {
+        DATA_BUCKET: dataBucket.bucketName,
+      }
+    });
+    lambda.role!.addToPrincipalPolicy(new PolicyStatement({
+      actions: [ "s3:List*" ],
+      resources: [ "*" ],
+    }))
+    const lambdaFunctionUrl = lambda.addFunctionUrl({
+      authType: FunctionUrlAuthType.AWS_IAM,
+    })
+
+    identityPool.authenticatedRole.addToPrincipalPolicy(new PolicyStatement({
+      actions: [ "lambda:InvokeFunction" ],
+      resources: [ lambda.functionArn, ],
+    }))
+    lambda.grantInvoke(identityPool.authenticatedRole);
+    dataBucket.grantPut(lambda.grantPrincipal);
+
     const domainName = "static-site-experiment.anasta.si";
     const certificate = new Certificate(usEast1Stack, "StaticSiteCertificate", {
       domainName,
@@ -45,12 +105,39 @@ export class StaticSiteStack extends cdk.Stack {
         origin: new S3Origin(staticSiteBucket, {
             originAccessIdentity: cloudfrontOriginAccessIdentity
         }),
-        // functionAssociations: [{
-        //     function: rewriteFunction,
-        //     eventType: cloudfront.FunctionEventType.VIEWER_REQUEST
-        // }],
+        functionAssociations: [{
+            function: new CloudFrontFunction(this, 'Function', {
+              code: FunctionCode.fromInline((
+                // @ts-ignore
+                function handler(event) {
+                    var request = event.request;
+                    if (request.uri.endsWith('/')) {
+                        request.uri += 'index.html';
+                    }
+                    return request;
+                }).toString()
+              ),
+            }),
+            eventType: FunctionEventType.VIEWER_REQUEST
+        }],
         viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         // responseHeadersPolicy: responseHeaderPolicy
+      },
+      errorResponses: [
+        {
+          httpStatus: 404,
+          responsePagePath: "/404.html"
+        }
+      ],
+      additionalBehaviors: {
+        "/api": {
+          origin: new FunctionUrlOrigin(lambdaFunctionUrl),
+        },
+        "/data": {
+          origin: new S3Origin(dataBucket, {
+            originAccessIdentity: cloudfrontOriginAccessIdentity,
+          }),
+        }
       },
     });
 
@@ -61,10 +148,27 @@ export class StaticSiteStack extends cdk.Stack {
     });
 
     new BucketDeployment(this, "DeployStaticSite", {
-      sources: [ Source.asset("../website/out") ],
+      sources: [ 
+        Source.asset("../website/out"), 
+        Source.data(
+          "config.js",
+          `window.config = ${JSON.stringify({
+            userPoolId: userPool.userPoolId,
+            userPoolClientId: userPoolClient.userPoolClientId,
+            identityPoolId: identityPool.identityPoolId,
+            functionName: lambda.functionName,
+          })};`
+        ),
+      ],
       destinationBucket: staticSiteBucket,
       distribution: cloudFrontDistribution,
-      distributionPaths: [ "/index.html" ],
+      distributionPaths: 
+        (fs as any).globSync("**", { 
+          cwd: "../website/out",
+          exclude: (f: string) => f === "_next" 
+        })
+        .filter((p: string) => p !== ".")
+        .map((p: string) => `/${p}`),
     });
   }
 }

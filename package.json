@@ -1,8 +1,0 @@
-{
-  "name": "aws-static-site-experiment-cdk",
-  "scripts": {
-    "postinstall": "cd cdk; npm install",
-    "cdk": "cd cdk; npx cdk",
-    "website": "cd website; "
-  }
-}
