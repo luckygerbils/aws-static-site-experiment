@@ -14,9 +14,9 @@ cdk() {
     npx cdk --profile "${PROFILE:-cdk}" "$@"
 }
 
-npm() {
+util:npm() {
     with:node "$@"
-    command npm "$@"
+    npm "$@"
 }
 
 node() {
