@@ -1,5 +1,6 @@
 import esbuild from "esbuild";
-import packageJson from "./package.json" with { type: 'json' };
+
+const packageJson = require("./package.json");
 
 esbuild.build({
     entryPoints: ['./index.ts'],
