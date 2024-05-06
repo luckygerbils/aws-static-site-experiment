@@ -16,12 +16,12 @@ util:node() {
 
 build() {
     with:node "$@"
-    node esbuild.config.mjs
+    node esbuild.config.js
 }
 
 ci:release() {
     npm ci
-    node esbuild.config.mjs
+    node esbuild.config.js
 }
 
 util:npm() {

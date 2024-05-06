@@ -1,5 +1,4 @@
-import esbuild from "esbuild";
-
+const esbuild = require("esbuild");
 const packageJson = require("./package.json");
 
 esbuild.build({
@@ -13,4 +12,5 @@ esbuild.build({
         ...Object.keys(packageJson.dependencies ?? {}),
         ...Object.keys(packageJson.devDependencies ?? {}),
     ],
+    logLevel: "info",
 });
