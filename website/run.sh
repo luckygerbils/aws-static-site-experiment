@@ -42,6 +42,11 @@ dev() {
         --experimental-https-cert "$HTTPS_CERT"
 }
 
+util:npm() {
+    with:node "$@"
+    npm "$@"
+}
+
 build() {
     with:node "$@"
     npx next build

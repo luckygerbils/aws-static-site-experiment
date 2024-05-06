@@ -2,13 +2,13 @@
     "name": "aws-static-site-experiment-website",
     "version": "0.1.0",
     "scripts": {
-        "build": "next build",
         "start": "next start",
         "lint": "next lint"
     },
     "devDependencies": {
         "@aws-sdk/client-cognito-identity-provider": "^3.533.0",
         "@aws-sdk/client-lambda": "^3.533.0",
+        "@aws-sdk/credential-provider-cognito-identity": "^3.533.0",
         "@types/node": "^20",
         "@types/react": "^18",
         "@types/react-dom": "^18",
