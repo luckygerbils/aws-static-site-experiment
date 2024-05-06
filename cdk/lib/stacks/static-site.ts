@@ -12,6 +12,7 @@ import { IdentityPool, UserPoolAuthenticationProvider } from '@aws-cdk/aws-cogni
 import { Code, Function, FunctionUrlAuthType, Runtime } from 'aws-cdk-lib/aws-lambda';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import fs = require('fs');
+import path = require('path');
 
 interface StaticSiteStackProps {
 }
@@ -162,13 +163,16 @@ export class StaticSiteStack extends cdk.Stack {
       ],
       destinationBucket: staticSiteBucket,
       distribution: cloudFrontDistribution,
-      distributionPaths: 
-        (fs as any).globSync("**", { 
-          cwd: "../website/out",
-          exclude: (f: string) => f === "_next" 
-        })
-        .filter((p: string) => p !== ".")
-        .map((p: string) => `/${p}`),
+      distributionPaths:
+        find("../website/out", (f: string) => f !== "_next")
+          .map((p: string) => p.replace(/^..\/website\/out/, "")),
     });
   }
+}
+
+function find(dir: string, filter: (str: string) => boolean): string[] {
+  return fs.readdirSync(dir)
+    .filter(filter)
+    .map(file => path.join(dir, file))
+    .flatMap(file => fs.statSync(file).isDirectory() ? find(file, filter) : [ file ]);
 }

@@ -19,9 +19,9 @@ util:npm() {
     npm "$@"
 }
 
-node() {
+util:node() {
     with:node "$@"
-    command node "$@"
+    node "$@"
 }
 
 cdk:deploy() {
